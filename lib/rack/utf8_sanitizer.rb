@@ -231,7 +231,22 @@ module Rack
     # Performs the reverse function of `unescape_unreserved`. Unlike
     # the previous function, we can reuse the logic in URI#encode
     def escape_unreserved(input)
-      URI.encode(input, UNSAFE)
+      str = input
+      unsafe = UNSAFE
+
+      # Inlining the escape method to ignore Ruby 2.7.0 warning
+      unless unsafe.kind_of?(Regexp)
+        # perhaps unsafe is String object
+        unsafe = Regexp.new("[#{Regexp.quote(unsafe)}]", false)
+      end
+      str.gsub(unsafe) do
+        us = $&
+          tmp = ''
+        us.each_byte do |uc|
+          tmp << sprintf('%%%02X', uc)
+        end
+        tmp
+      end.force_encoding(Encoding::US_ASCII)
     end
 
     def sanitize_string(input)
